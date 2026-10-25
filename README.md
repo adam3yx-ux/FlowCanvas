@@ -27,3 +27,4 @@ Initial setup. Scope and requirements are pending review of the official course 
 - UML Diagrams: `docs/diagrams/`
 - Task Register: `docs/management/TASK-REGISTER.md`
 - Design Decisions: `docs/decisions/`
+- PROJECT-DOCUMENTATION `docs/PROJECT-DOCUMENTATION.md`
