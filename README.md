@@ -11,14 +11,16 @@ The project is being developed as part of a Software Engineering course, with a 
 - **Adam Abdelazim** — Team Lead and Project Coordinator
 - **Mazen El-Sayed** — Team Member
 - **Mohamed El-Daghidi** — Team Member
+- **Maha** — Team Member
+- **Hagar** — Team Member
 
 ## Documentation
 
-- [Project Documentation](docs/PROJECT-DOCUMENTATION.md)
-- [Requirements](docs/requirements/)
-- [UML Diagrams](docs/diagrams/)
-- [Design Decisions](docs/decisions/)
-- [Task Register](docs/management/TASK-REGISTER.md)
+- [Project Documentation](https://github.com/adam3yx-ux/FlowCanvas/blob/main/docs/PROJECT-DOCUMENTATION.md)
+- [Requirements](https://github.com/adam3yx-ux/FlowCanvas/tree/main/docs/requirements)
+- [UML Diagrams](https://github.com/adam3yx-ux/FlowCanvas/tree/main/docs/diagrams)
+- [Design Decisions](https://github.com/adam3yx-ux/FlowCanvas/tree/main/docs/decisions)
+- [Task Register](https://github.com/adam3yx-ux/FlowCanvas/blob/main/docs/management/TASK-REGISTER.md)
 
 ## Project Status
 
@@ -27,4 +29,3 @@ Initial setup and documentation. The detailed requirements, technical design, an
 ## Development Practices
 
 The team plans to use GitHub Issues, GitHub Projects, feature branches, meaningful commits, and pull requests to manage development and collaboration.
-
