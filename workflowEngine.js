@@ -15,6 +15,8 @@ import { NODE_TYPES, NODE_SCHEMAS, executeNode } from './nodes.js';
  * @param {Object} workflow { nodes: Array, edges: Array }
  * @returns {Object} { valid: boolean, errors: Array<string>, warnings: Array<string> }
  */
+
+
 export function validateWorkflow(workflow) {
   const errors = [];
   const warnings = [];
@@ -282,3 +284,5 @@ export async function executeWorkflow(workflow) {
     durationMs
   };
 }
+
+// pullR
