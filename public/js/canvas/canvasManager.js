@@ -770,7 +770,7 @@ export class CanvasManager {
       } else if (state === 'success') {
         pill.style.display = 'inline-flex';
         pill.className = 'node-status-pill pill-success';
-        const displayVal = output !== null && output !== undefined ? (typeof output === 'object' ? JSON.stringify(output) : output) : '✓ Done';
+        const displayVal = output !== null && output !== undefined ? (typeof output === 'object' ? JSON.stringify(output) : output) : 'Done';
         pill.innerHTML = `✓ ${this.escapeHtml(String(displayVal))}`;
       } else if (state === 'skipped') {
         pill.style.display = 'inline-flex';
