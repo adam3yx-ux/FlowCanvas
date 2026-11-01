@@ -462,11 +462,13 @@ export class CanvasManager {
       path.setAttribute('id', `edge-el-${edge.id}`);
       path.setAttribute('marker-end', `url(#${markerId})`);
 
-      // Edge click to select or delete
+      // Edge click to select (Delete/Backspace then removes it).
+      // selectEdge() already clears the node selection and notifies the
+      // inspector; calling selectNode(null) afterwards would reset
+      // selectedEdgeId and make edges impossible to select.
       path.addEventListener('click', (e) => {
         e.stopPropagation();
         this.selectEdge(edge.id);
-        this.selectNode(null);
       });
 
       this.edgesGroup.appendChild(path);
