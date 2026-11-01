@@ -63,9 +63,12 @@ export class CanvasManager {
   }
 
   bindGlobalEvents() {
-    // Canvas pointer move for node drag & edge drawing
-    this.container.addEventListener('mousemove', (e) => this.onMouseMove(e));
-    this.container.addEventListener('mouseup', (e) => this.onMouseUp(e));
+    // Pointer move/up for node drag & edge drawing. Listen on window, not the
+    // container: if the pointer leaves the canvas mid-drag and the button is
+    // released outside it, a container-level mouseup is never delivered and the
+    // node (or draft connection) stays glued to the cursor.
+    window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+    window.addEventListener('mouseup', (e) => this.onMouseUp(e));
 
     // Deselect when clicking blank canvas
     this.container.addEventListener('mousedown', (e) => {
@@ -270,6 +273,13 @@ export class CanvasManager {
   }
 
   onMouseMove(e) {
+    // The button was released where we never saw it (e.g. outside the browser
+    // window): finish the drag/connection instead of following the cursor.
+    if ((this.draggedNode || this.connectingSource) && e.buttons === 0) {
+      this.onMouseUp(e);
+      return;
+    }
+
     const containerRect = this.container.getBoundingClientRect();
     this.mousePos = {
       x: e.clientX - containerRect.left,
@@ -311,7 +321,7 @@ export class CanvasManager {
 
     if (this.connectingSource) {
       // Check if dropped on a valid input port
-      const targetPort = e.target.closest('.port-input');
+      const targetPort = e.target?.closest?.('.port-input');
       if (targetPort) {
         const targetNodeId = targetPort.dataset.nodeId;
         const targetPortId = targetPort.dataset.portId;
