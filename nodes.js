@@ -9,6 +9,8 @@
  * 5. Output: Captures and displays the final value
  */
 
+// type
+
 export const NODE_TYPES = {
   START: 'start',
   INPUT: 'input',
