@@ -111,12 +111,18 @@ body {
   padding: 2px 7px;
   border-radius: 12px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
+/* The toolbar must stay one line on laptop-width screens: let the middle
+   section shrink (ellipsis) instead of wrapping its text onto 2-3 lines. */
 .workflow-status-bar {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex: 1 1 auto;
+  margin: 0 16px;
 }
 
 .workflow-name-pill {
@@ -126,15 +132,25 @@ body {
   padding: 4px 12px;
   border-radius: 20px;
   border: 1px solid var(--border-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .preset-selector-wrap {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .preset-select {
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
   padding: 6px 12px;
   font-size: 13px;
   border-radius: var(--radius-sm);
@@ -154,6 +170,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .btn {
@@ -168,6 +185,7 @@ body {
   border: 1px solid transparent;
   transition: all 0.15s ease-in-out;
   font-family: inherit;
+  white-space: nowrap;
 }
 
 .btn-primary {
