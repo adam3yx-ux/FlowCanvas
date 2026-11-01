@@ -26,8 +26,13 @@ export class CanvasManager {
     this.dragOffset = { x: 0, y: 0 };
 
     // Connection creation state
-    this.connectingSource = null; // { nodeId, portId, startX, startY }
-    this.mousePos = { x: 0, y: 0 };
+    this.connectingSource = null; // { nodeId, portId, startX, startY } (world coords)
+    this.mousePos = { x: 0, y: 0 }; // world coords
+
+    // View transform applied to the whole canvas "world" (nodes + edges).
+    // node.position and edge paths always live in world coordinates, so the
+    // saved workflow data never depends on the current zoom.
+    this.view = { scale: 1, tx: 0, ty: 0 };
 
     this.initDOM();
     this.bindGlobalEvents();
@@ -35,6 +40,7 @@ export class CanvasManager {
 
   initDOM() {
     this.container.innerHTML = `
+      <div class="canvas-world" id="canvas-world">
       <svg class="canvas-svg-layer" id="canvas-svg-layer">
         <defs>
           <marker id="arrow-default" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -54,8 +60,10 @@ export class CanvasManager {
         <path id="draft-edge" class="draft-edge" d="" style="display:none;"></path>
       </svg>
       <div class="canvas-nodes-layer" id="canvas-nodes-layer"></div>
+      </div>
     `;
 
+    this.worldEl = this.container.querySelector('#canvas-world');
     this.svgLayer = this.container.querySelector('#canvas-svg-layer');
     this.edgesGroup = this.container.querySelector('#edges-group');
     this.draftEdge = this.container.querySelector('#draft-edge');
@@ -69,6 +77,17 @@ export class CanvasManager {
     // node (or draft connection) stays glued to the cursor.
     window.addEventListener('mousemove', (e) => this.onMouseMove(e));
     window.addEventListener('mouseup', (e) => this.onMouseUp(e));
+
+    // Keep the whole workflow in view when the window is resized.
+    let resizeFrame = null;
+    window.addEventListener('resize', () => {
+      if (resizeFrame) cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = null;
+        this.fitView();
+        this.renderEdges();
+      });
+    });
 
     // Deselect when clicking blank canvas
     this.container.addEventListener('mousedown', (e) => {
@@ -102,6 +121,9 @@ export class CanvasManager {
     this.selectedNodeId = null;
     this.selectedEdgeId = null;
     this.render();
+    // Nodes are in the DOM now, so their real sizes are measurable. Edges are
+    // drawn in the next animation frame and will pick up this view.
+    this.fitView();
   }
 
   getWorkflowData() {
@@ -109,6 +131,79 @@ export class CanvasManager {
       nodes: JSON.parse(JSON.stringify(this.nodes)),
       edges: JSON.parse(JSON.stringify(this.edges))
     };
+  }
+
+  // --- View (fit-to-screen) ---
+
+  // Viewport (client) pixels -> world coordinates, the space node.position and
+  // the SVG edge paths are expressed in.
+  clientToWorld(clientX, clientY) {
+    const rect = this.container.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left - this.view.tx) / this.view.scale,
+      y: (clientY - rect.top - this.view.ty) / this.view.scale
+    };
+  }
+
+  // The part of the world currently visible inside the container.
+  getVisibleWorldRect() {
+    const { scale, tx, ty } = this.view;
+    return {
+      x0: -tx / scale,
+      y0: -ty / scale,
+      x1: (this.container.clientWidth - tx) / scale,
+      y1: (this.container.clientHeight - ty) / scale
+    };
+  }
+
+  applyView() {
+    const { scale, tx, ty } = this.view;
+    this.worldEl.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  }
+
+  getNodeSize(nodeId) {
+    const el = document.getElementById(`node-el-${nodeId}`);
+    return { w: el?.offsetWidth || 185, h: el?.offsetHeight || 110 };
+  }
+
+  // Scale (down only) and centre the workflow so every node is visible. A
+  // workflow that already fits is left exactly as authored (scale 1, no shift).
+  fitView() {
+    const PADDING = 40;
+    const MIN_SCALE = 0.45;
+    const cw = this.container.clientWidth;
+    const ch = this.container.clientHeight;
+
+    let view = { scale: 1, tx: 0, ty: 0 };
+
+    if (this.nodes.length && cw > 0 && ch > 0) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      this.nodes.forEach(node => {
+        const x = node.position?.x ?? 100;
+        const y = node.position?.y ?? 100;
+        const { w, h } = this.getNodeSize(node.id);
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + w);
+        maxY = Math.max(maxY, y + h);
+      });
+
+      const contentW = maxX - minX;
+      const contentH = maxY - minY;
+      const fitScale = Math.min((cw - 2 * PADDING) / contentW, (ch - 2 * PADDING) / contentH);
+      const scale = Math.max(MIN_SCALE, Math.min(1, fitScale));
+
+      if (scale < 1) {
+        view = {
+          scale,
+          tx: (cw - contentW * scale) / 2 - minX * scale,
+          ty: (ch - contentH * scale) / 2 - minY * scale
+        };
+      }
+    }
+
+    this.view = view;
+    this.applyView();
   }
 
   render() {
@@ -262,13 +357,11 @@ export class CanvasManager {
 
   startNodeDrag(e, node) {
     this.draggedNode = node;
-    const rect = this.container.getBoundingClientRect();
-    const nodeEl = document.getElementById(`node-el-${node.id}`);
-    const nodeRect = nodeEl.getBoundingClientRect();
-
+    // Offset between the pointer and the node's top-left, in world coordinates
+    const pointer = this.clientToWorld(e.clientX, e.clientY);
     this.dragOffset = {
-      x: e.clientX - nodeRect.left,
-      y: e.clientY - nodeRect.top
+      x: pointer.x - (node.position?.x ?? 100),
+      y: pointer.y - (node.position?.y ?? 100)
     };
   }
 
@@ -280,20 +373,18 @@ export class CanvasManager {
       return;
     }
 
-    const containerRect = this.container.getBoundingClientRect();
-    this.mousePos = {
-      x: e.clientX - containerRect.left,
-      y: e.clientY - containerRect.top
-    };
+    this.mousePos = this.clientToWorld(e.clientX, e.clientY);
 
     // If dragging node
     if (this.draggedNode) {
       let newX = this.mousePos.x - this.dragOffset.x;
       let newY = this.mousePos.y - this.dragOffset.y;
 
-      // Keep inside bounds
-      newX = Math.max(10, Math.min(newX, containerRect.width - 200));
-      newY = Math.max(10, Math.min(newY, containerRect.height - 150));
+      // Keep the node inside the visible part of the canvas
+      const vis = this.getVisibleWorldRect();
+      const { w, h } = this.getNodeSize(this.draggedNode.id);
+      newX = Math.max(vis.x0 + 10, Math.min(newX, Math.max(vis.x0 + 10, vis.x1 - w - 10)));
+      newY = Math.max(vis.y0 + 10, Math.min(newY, Math.max(vis.y0 + 10, vis.y1 - h - 10)));
 
       this.draggedNode.position = { x: Math.round(newX), y: Math.round(newY) };
       
@@ -343,14 +434,19 @@ export class CanvasManager {
       // Start drawing edge from output port
       const handle = portEl.querySelector('.port-handle');
       const handleRect = handle.getBoundingClientRect();
-      const containerRect = this.container.getBoundingClientRect();
+      const start = this.clientToWorld(
+        handleRect.left + handleRect.width / 2,
+        handleRect.top + handleRect.height / 2
+      );
 
       this.connectingSource = {
         nodeId,
         portId,
-        startX: handleRect.left + handleRect.width / 2 - containerRect.left,
-        startY: handleRect.top + handleRect.height / 2 - containerRect.top
+        startX: start.x,
+        startY: start.y
       };
+      // Draw the draft line from the port to the pointer straight away
+      this.mousePos = this.clientToWorld(e.clientX, e.clientY);
 
       this.draftEdge.style.display = 'block';
       this.updateDraftEdge();
@@ -426,7 +522,6 @@ export class CanvasManager {
 
   renderEdges() {
     this.edgesGroup.innerHTML = '';
-    const containerRect = this.container.getBoundingClientRect();
 
     this.edges.forEach(edge => {
       const sourcePort = this.findPortElement(edge.sourceNodeId, edge.sourcePortId, 'output');
@@ -441,10 +536,8 @@ export class CanvasManager {
       const sRect = sHandle.getBoundingClientRect();
       const tRect = tHandle.getBoundingClientRect();
 
-      const x1 = sRect.left + sRect.width / 2 - containerRect.left;
-      const y1 = sRect.top + sRect.height / 2 - containerRect.top;
-      const x2 = tRect.left + tRect.width / 2 - containerRect.left;
-      const y2 = tRect.top + tRect.height / 2 - containerRect.top;
+      const { x: x1, y: y1 } = this.clientToWorld(sRect.left + sRect.width / 2, sRect.top + sRect.height / 2);
+      const { x: x2, y: y2 } = this.clientToWorld(tRect.left + tRect.width / 2, tRect.top + tRect.height / 2);
 
       const pathData = this.calculateBezierPath(x1, y1, x2, y2);
 
@@ -533,21 +626,55 @@ export class CanvasManager {
 
   // --- Add & Delete Nodes / Edges ---
 
+  // First free spot (left-to-right, top-to-bottom) inside the visible canvas
+  // where a new node does not overlap an existing one. Returns null if full.
+  findFreePosition(width = 185, height = 130) {
+    const GAP = 24;
+    const STEP = 40;
+    const vis = this.getVisibleWorldRect();
+    const taken = this.nodes.map(node => {
+      const { w, h } = this.getNodeSize(node.id);
+      return { x: node.position?.x ?? 100, y: node.position?.y ?? 100, w, h };
+    });
+
+    for (let y = vis.y0 + 20; y + height <= vis.y1 - 10; y += STEP) {
+      for (let x = vis.x0 + 20; x + width <= vis.x1 - 10; x += STEP) {
+        const clear = taken.every(r =>
+          x + width + GAP <= r.x || r.x + r.w + GAP <= x ||
+          y + height + GAP <= r.y || r.y + r.h + GAP <= y
+        );
+        if (clear) return { x: Math.round(x), y: Math.round(y) };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * @param {string} type  One of NODE_TYPES.
+   * @param {{x:number,y:number}|null} position  Optional drop point in
+   *   container-relative pixels (what the library drop handler in app.js
+   *   passes). It is converted to world coordinates here so it stays correct
+   *   when the view is scaled. Omit it to auto-place in a free spot.
+   */
   addNode(type, position = null) {
     const schema = NODE_SCHEMAS[type];
     if (!schema) return null;
 
     const id = `node_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    
-    // Position near center or intelligent offset
-    let pos = position;
-    if (!pos) {
-      const containerRect = this.container.getBoundingClientRect();
-      const existingCount = this.nodes.length;
+
+    let pos;
+    if (position) {
+      const vis = this.getVisibleWorldRect();
+      const x = (position.x - this.view.tx) / this.view.scale;
+      const y = (position.y - this.view.ty) / this.view.scale;
       pos = {
-        x: Math.min(100 + (existingCount * 40) % 500, containerRect.width - 220),
-        y: Math.min(100 + (existingCount * 40) % 350, containerRect.height - 180)
+        x: Math.round(Math.max(vis.x0 + 10, Math.min(x, vis.x1 - 195))),
+        y: Math.round(Math.max(vis.y0 + 10, Math.min(y, vis.y1 - 120)))
       };
+    } else {
+      const vis = this.getVisibleWorldRect();
+      const offset = (this.nodes.length * 30) % 200;
+      pos = this.findFreePosition() || { x: Math.round(vis.x0 + 20 + offset), y: Math.round(vis.y0 + 20 + offset) };
     }
 
     const newNode = {
