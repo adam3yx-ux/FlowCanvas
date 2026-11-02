@@ -133,11 +133,10 @@ export class NodeInspector {
               type="number" 
               id="inp-transform-operand" 
               class="form-input" 
-              value="${this.escapeHtml(this.displayNumber(config, 'operand', 2))}" 
+              value="${this.escapeHtml(String(config.operand ?? 2))}" 
               step="any"
             />
             <small class="form-help">Value used in the calculation.</small>
-            <small class="form-help field-error" style="display:none;color:#dc2626;" role="alert">Required: enter a number, or the workflow cannot run.</small>
           </div>
         `;
 
@@ -158,11 +157,10 @@ export class NodeInspector {
               type="number" 
               id="inp-condition-threshold" 
               class="form-input" 
-              value="${this.escapeHtml(this.displayNumber(config, 'threshold', 15))}" 
+              value="${this.escapeHtml(String(config.threshold ?? 15))}" 
               step="any"
             />
             <small class="form-help">Value compared against incoming input data.</small>
-            <small class="form-help field-error" style="display:none;color:#dc2626;" role="alert">Required: enter a number, or the workflow cannot run.</small>
           </div>
           <div class="info-callout callout-condition">
             <strong>Branching Behavior:</strong>
@@ -217,11 +215,8 @@ export class NodeInspector {
         this.onUpdateNode(node.id, { operation: op });
       });
 
-      this.toggleFieldError(operandInput, this.isMissing(node.config || {}, 'operand'));
-
       operandInput.addEventListener('input', (e) => {
-        const operand = this.parseNumberField(e.target.value);
-        this.toggleFieldError(operandInput, operand === undefined || Number.isNaN(operand));
+        const operand = e.target.value === '' ? 0 : Number(e.target.value);
         this.onUpdateNode(node.id, { operand });
       });
     } else if (node.type === NODE_TYPES.CONDITION) {
@@ -232,40 +227,11 @@ export class NodeInspector {
         this.onUpdateNode(node.id, { operator: e.target.value });
       });
 
-      this.toggleFieldError(threshInput, this.isMissing(node.config || {}, 'threshold'));
-
       threshInput.addEventListener('input', (e) => {
-        const threshold = this.parseNumberField(e.target.value);
-        this.toggleFieldError(threshInput, threshold === undefined || Number.isNaN(threshold));
+        const threshold = e.target.value === '' ? 0 : Number(e.target.value);
         this.onUpdateNode(node.id, { threshold });
       });
     }
-  }
-
-  // An empty number field is stored as undefined (never silently as 0).
-  // undefined is dropped by JSON, so the engine's validateWorkflow() rejects it
-  // with a clear "requires a valid numeric ..." message.
-  parseNumberField(raw) {
-    return raw.trim() === '' ? undefined : Number(raw);
-  }
-
-  // Field is "missing" when the key was explicitly cleared (present but undefined)
-  isMissing(config, key) {
-    return Object.prototype.hasOwnProperty.call(config, key) &&
-      (config[key] === undefined || Number.isNaN(config[key]));
-  }
-
-  displayNumber(config, key, fallback) {
-    if (this.isMissing(config, key)) return '';
-    return String(config[key] ?? fallback);
-  }
-
-  // Show/hide the inline "required" hint under a number field
-  toggleFieldError(inputEl, invalid) {
-    const hint = inputEl.parentElement.querySelector('.field-error');
-    if (hint) hint.style.display = invalid ? 'block' : 'none';
-    inputEl.style.borderColor = invalid ? '#dc2626' : '';
-    inputEl.setAttribute('aria-invalid', invalid ? 'true' : 'false');
   }
 
   escapeHtml(str) {

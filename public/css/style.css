@@ -111,18 +111,12 @@ body {
   padding: 2px 7px;
   border-radius: 12px;
   font-weight: 600;
-  white-space: nowrap;
 }
 
-/* The toolbar must stay one line on laptop-width screens: let the middle
-   section shrink (ellipsis) instead of wrapping its text onto 2-3 lines. */
 .workflow-status-bar {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 0;
-  flex: 1 1 auto;
-  margin: 0 16px;
 }
 
 .workflow-name-pill {
@@ -132,25 +126,15 @@ body {
   padding: 4px 12px;
   border-radius: 20px;
   border: 1px solid var(--border-color);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 0 1 auto;
-  min-width: 0;
 }
 
 .preset-selector-wrap {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-width: 0;
-  flex: 1 1 auto;
 }
 
 .preset-select {
-  min-width: 0;
-  max-width: 100%;
-  text-overflow: ellipsis;
   padding: 6px 12px;
   font-size: 13px;
   border-radius: var(--radius-sm);
@@ -170,7 +154,6 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
 }
 
 .btn {
@@ -185,7 +168,6 @@ body {
   border: 1px solid transparent;
   transition: all 0.15s ease-in-out;
   font-family: inherit;
-  white-space: nowrap;
 }
 
 .btn-primary {
@@ -361,19 +343,6 @@ body {
   overflow: hidden;
 }
 
-/* Holds nodes + edges; CanvasManager scales/translates it so the whole
-   workflow fits the viewport. pointer-events:none lets empty-canvas clicks
-   reach the container (children opt back in). */
-.canvas-world {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  transform-origin: 0 0;
-  pointer-events: none;
-}
-
 .canvas-svg-layer {
   position: absolute;
   top: 0;
@@ -382,14 +351,12 @@ body {
   height: 100%;
   pointer-events: none;
   z-index: 2;
-  overflow: visible; /* edges can extend past the unscaled container box */
 }
 
 .workflow-edge {
   fill: none;
   stroke: #94a3b8;
   stroke-width: 2.5px;
-  vector-effect: non-scaling-stroke; /* keep lines crisp/clickable when zoomed out */
   pointer-events: stroke;
   cursor: pointer;
   transition: stroke 0.2s;
@@ -418,7 +385,6 @@ body {
   fill: none;
   stroke: #6366f1;
   stroke-width: 2.5px;
-  vector-effect: non-scaling-stroke;
   stroke-dasharray: 4 4;
 }
 
